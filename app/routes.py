@@ -8,10 +8,10 @@ Routes:
   GET  /result                – load chart from DB, call recommend(), render result
   GET  /profile               – placeholder
 """
-
 from flask import (
     Blueprint, abort, g, redirect, render_template, request, session, url_for
 )
+import math
 from functools import wraps
 import hmac
 import secrets
@@ -129,7 +129,7 @@ def _validate_form(form, required_measurements: list[str]) -> tuple[dict, list[s
             values[name] = None
             continue
         lo, hi = MEASUREMENT_RANGES.get(name, (0, 9999))
-        if not (lo <= val <= hi):
+        if not math.isfinite(val) or not (lo <= val <= hi):
             errors.append(
                 f"{MEASUREMENT_LABELS.get(name, name)} must be between "
                 f"{lo:.0f} and {hi:.0f} cm."
@@ -372,20 +372,32 @@ def result():
         (category_id,)
     ).fetchall()
     weights_list = [dict(r) for r in weight_rows]
-    known_measurements = {w['measurement'] for w in weights_list}
+        known_measurements = {w['measurement'] for w in weights_list}
 
-    # ---- Parse measurement values from query string ----
-    measurements = {}
-    for m in known_measurements:
-        raw = args.get(m, '').strip()
-        if raw:
-            try:
-                measurements[m] = float(raw)
-            except ValueError:
-                pass
+    # ---- Validate measurement values from query string ----
+    measurements, measurement_errors = _validate_form(
+        args,
+        list(known_measurements)
+    )
+
+    if measurement_errors:
+        return render_template(
+            'result.html',
+            error="Invalid measurements: " + " ".join(measurement_errors)
+        ), 400
+
+    # Keep only measurements required by the selected category
+    measurements = {
+        m: measurements[m]
+        for m in known_measurements
+        if measurements.get(m) is not None
+    }
 
     if not measurements:
-        return render_template('result.html', error="No measurements provided."), 400
+        return render_template(
+            'result.html',
+            error="No measurements provided."
+        ), 400
 
     # ---- Call the recommendation engine ----
     rec = _recommend(
