@@ -1,7 +1,12 @@
-# SizeLens: project spec
+# SizeLens 👕
+### Smart Clothing Size Recommendation System
 
-Web app that recommends a clothing size from body measurements and a
-brand-specific size chart. Rule-based, no machine learning.
+SizeLens is a web application that helps users find their most suitable
+clothing size based on their body measurements and brand-specific size charts.
+
+The application uses a rule-based recommendation algorithm to calculate
+size compatibility, compare measurements, and suggest the best-fitting size
+without relying on machine learning.
 
 ## Stack
 Python 3, Flask, SQLite (sqlite3 module), Jinja templates, plain CSS/JS, pytest.
